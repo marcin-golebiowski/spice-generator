@@ -36,6 +36,8 @@ class Guassian implements GuassianInterface
 
 	/**
 	 * Method generate a guassian distribution for a given x, mean and standard deviation
+	 * Use the stats_rand_gen_normal() - it's probably not so we use the Box-Muller method
+	 * as a fall back.
 	 * 
 	 * @param   integer  $x      The x value
 	 * @param   integer  $mu     The mean
@@ -47,8 +49,29 @@ class Guassian implements GuassianInterface
 	 */
 	public function generate($mu, $sigma)
 	{
-		$x = 0;
+		if (function_exists('stats_rand_gen_normal'))
+		{
+			return stats_rand_gen_normal($mu, $sigma);
+		}
+		else
+		{
+			// Set a random seed
+			mt_srand($this->makeSeed());
 
-		return $this->createFunction($x, $mu, $sigma);
+			$a = mt_rand() / mt_getrandmax();
+			$b = mt_rand() / mt_getrandmax();
+
+			// The standard Guassian with sigma=1 and mean=0
+			$gauss = sqrt(-2 * log($a)) * cos(2 * pi() * $b);
+			
+			return ($sigma * $gauss) + $mu;
+		}
+	}
+
+	private function makeSeed()
+	{
+		list($usec, $sec) = explode(' ', microtime());
+
+		return (float) $sec + ((float) $usec * 100000);	
 	}
 }
