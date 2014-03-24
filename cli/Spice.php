@@ -127,7 +127,7 @@ class Spice extends AbstractCliApplication
 		$this->inductorDev = 0;
 		$this->inductor = 470.0;
 		$this->capacitor = 47.0;
-		
+
 		// Calculate the perfect termination resistance
 		$this->rTerm = sqrt($this->inductor/$this->capacitor);
 
@@ -183,7 +183,7 @@ class Spice extends AbstractCliApplication
 
 		$string .= "* LC transmission line with charge injection" . "\n";
 		$string .= "R1 0 N001 " . number_format($this->rTerm, 6) . "\n";
-		$string .= "R2 0 N" . sprintf('%03d', $this->nTaps) . ' ' . number_format($this->rTerm, 6) . "\n";
+		$string .= "R2 0 N" . sprintf('%03d', $this->nTaps + 1) . ' ' . number_format($this->rTerm, 6) . "\n";
 
 		$i = 0;
 
@@ -200,7 +200,7 @@ class Spice extends AbstractCliApplication
 			$i++;
 		}
 
-		$string .= '.tran 50ns 5us' . "\n";
+		$string .= '.tran 100ps 5us' . "\n";
 		$string .= '.end';
 
 		return $string;
@@ -228,7 +228,7 @@ class Spice extends AbstractCliApplication
 		// $this->out("The inductor value is: " . $inductorVal . '\n');
 
 		$string .= 'I' . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $tapIndex) . ' 0 ' . 'PULSE (0.0' .  $pulseAmplitudeUnits . ' ' . number_format($pulseAmplitude, 6) .  $pulseAmplitudeUnits . ' '
-			. number_format($pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . '  1.0ns)' . "\n";
+			. number_format($pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' 1.0ns)' . "\n";
 
 		return $string;
 	}
