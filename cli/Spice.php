@@ -109,6 +109,13 @@ class Spice extends AbstractCliApplication
 	protected $inductor;
 
 	/**
+	 * The fileName to store the data in.
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $fileName;
+	/**
 	 * Class constructor
 	 *
 	 * @since   1.0
@@ -123,10 +130,11 @@ class Spice extends AbstractCliApplication
 		$this->statsClass = new \Wilsonge\Statistics\Guassian;
 		$this->pulsePosition = 24.5;
 		$this->pulseWidth = 2.5;
-		$this->capDev = 0;
-		$this->inductorDev = 0;
 		$this->inductor = 470.0;
+		$this->inductorDev = 0;
 		$this->capacitor = 47.0;
+		$this->capDev = 0;
+		$this->fileName = 'spice.cir';
 
 		// Calculate the perfect termination resistance
 		$this->rTerm = sqrt($this->inductor/$this->capacitor);
@@ -150,7 +158,7 @@ class Spice extends AbstractCliApplication
 		if ($string)
 		{
 			$this->out('Creating the files');
-			$fileName = 'spice.cir';
+			$fileName = $this->fileName;
 
 			// Write the file
 			$path = $this->baseDir . $fileName;
