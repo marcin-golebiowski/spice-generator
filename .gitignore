@@ -1,0 +1,9 @@
+# IDE/System based files and folders #
+.buildpath
+.project
+.settings
+.DS_Store
+.idea
+
+# Spice generated files #
+spice/*
