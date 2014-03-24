@@ -31,7 +31,7 @@ class Guassian implements GuassianInterface
 		$difference = $x - $mu;
 		$power = $difference/$sigma;
 
-		return exp(pow($power, 2)/2);
+		return exp(-pow($power, 2)/2);
 	}
 
 	/**
