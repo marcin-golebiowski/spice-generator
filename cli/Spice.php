@@ -77,6 +77,38 @@ class Spice extends AbstractCliApplication
 	protected $pulseWidth;
 
 	/**
+	 * The standard deviation of the capacitors.
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $capDev;
+
+	/**
+	 * The standard deviation of the indctuors.
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $inductorDev;
+
+	/**
+	 * The value of the capacitance in nF.
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $capacitor;
+
+	/**
+	 * The value of the inductance in nH.
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $inductor;
+
+	/**
 	 * Class constructor
 	 *
 	 * @since   1.0
@@ -88,17 +120,22 @@ class Spice extends AbstractCliApplication
 		
 		$this->baseDir = JPATH_ROOT . '/spice/';
 		$this->nTaps = 50;
-		$this->rTerm = 3.3;
 		$this->statsClass = new \Wilsonge\Statistics\Guassian;
 		$this->pulsePosition = 24.5;
 		$this->pulseWidth = 2.5;
+		$this->capDev = 0;
+		$this->inductorDev = 0;
+		$this->inductor = 470.0;
+		$this->capacitor = 47.0;
+		
+		// Calculate the perfect termination resistance
+		$this->rTerm = sqrt($this->inductor/$this->capacitor);
 
 		parent::__construct($input, $config, $output);
 	}
 
 	/**
-	 * Method to run the application routines.  Most likely you will want to instantiate a controller
-	 * and execute it, or perform some sort of task directly.
+	 * Generates the required string to a file and saves it
 	 *
 	 * @return  void
 	 *
@@ -114,9 +151,11 @@ class Spice extends AbstractCliApplication
 		{
 			$this->out('Creating the files');
 			$fileName = 'spice.cir';
-			$this->generateFile($fileName, $string);
-			
-			$this->out('File generated at ' . $this->baseDir . $fileName);
+
+			// Write the file
+			$path = $this->baseDir . $fileName;
+			File::write($path, $string);
+			$this->out('File generated at ' . $path);
 			
 			return;
 		}
@@ -124,6 +163,15 @@ class Spice extends AbstractCliApplication
 		$this->out('No files to generate!');
 	}
 
+	/**
+	 * Method to run the application routines.  Most likely you will want to instantiate a controller
+	 * and execute it, or perform some sort of task directly.
+	 *
+	 * @return  void
+	 *
+	 * @since   1.0
+	 * @throws  \RuntimeException
+	 */
 	private function generateString()
 	{
 		if (!is_integer($this->nTaps) && $this->nTaps < 1)
@@ -134,8 +182,8 @@ class Spice extends AbstractCliApplication
 		$string = null;
 
 		$string .= "* LC transmission line with charge injection" . "\n";
-		$string .= "R1 0 N001 " . $this->rTerm . "\n";
-		$string .= "R2 0 N" . sprintf('%03d', $this->nTaps) . ' ' . $this->rTerm . "\n";
+		$string .= "R1 0 N001 " . number_format($this->rTerm, 6) . "\n";
+		$string .= "R2 0 N" . sprintf('%03d', $this->nTaps) . ' ' . number_format($this->rTerm, 6) . "\n";
 
 		$i = 0;
 
@@ -143,14 +191,16 @@ class Spice extends AbstractCliApplication
 		{
 			$tap = $i + 1;
 			$pulseAmplitude = $this->statsClass->createFunction($tap, $this->pulsePosition, $this->pulseWidth);
+			// $this->out("tap, pulsePosition, pulseWidth, Pulse amplitude: \n" . $tap . ', ' . $this->pulsePosition . ', ' . $this->pulseWidth . ', ' . $pulseAmplitude . '\n');
 			$string .= $this->generateTapComponents($tap,
 				$pulseAmplitude, 0.1, 'A', 100, 10, 'ns', // Pulse Param
-				47.0, 4.7, 'nF', // Cap Param
-				470.0, 47.0, 'nH' // Inductor Param
+				$this->capacitor, $this->capDev, 'nF', // Cap Param
+				$this->inductor, $this->inductorDev, 'nH' // Inductor Param
 			);
 			$i++;
 		}
 
+		$string .= '.tran 50ns 5us' . "\n";
 		$string .= '.end';
 
 		return $string;
@@ -163,26 +213,23 @@ class Spice extends AbstractCliApplication
      * Capacitor goes from node TapIndex to ground. Inductor goes from node TapIndex to node TapIndex+1
 	 *
 	 * @return  string
-	 **/
+	 */
 	private function generateTapComponents($tapIndex, $pulseAmplitude, $pulseNoise, $pulseAmplitudeUnits, $pulseStartTime, $pulseOnTime, $pulseTimeUnits,
 		$capNominal, $capSigma, $capUnits, $inductorNominal, $inductorSigma, $inductorUnits)
 	{
 		$string = null;
 
 		$capVal = $this->statsClass->generate($capNominal, $capSigma);
+		// $this->out("The capacitor value is: " . $capVal . '\n');
 		$string .= 'C' . sprintf('%03d', $tapIndex) . ' 0 N'  . sprintf('%03d', $tapIndex) . ' ' . number_format($capVal, 6) . $capUnits . "\n";
 
 		$inductorVal = $this->statsClass->generate($inductorNominal, $inductorSigma);
 		$string .= 'L' . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $tapIndex) . ' N'  . sprintf('%03d', $tapIndex + 1) . ' ' . number_format($inductorVal, 6) . $inductorUnits . "\n";
+		// $this->out("The inductor value is: " . $inductorVal . '\n');
 
-		$string .= 'I' . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $tapIndex) . ' 0 ' . 'PULSE ( 0.0 ' . number_format($pulseAmplitude, 6) .  $pulseAmplitudeUnits . ' '
-			. number_format($pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . '  1.0ns )' . "\n";
+		$string .= 'I' . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $tapIndex) . ' 0 ' . 'PULSE (0.0' .  $pulseAmplitudeUnits . ' ' . number_format($pulseAmplitude, 6) .  $pulseAmplitudeUnits . ' '
+			. number_format($pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . '  1.0ns)' . "\n";
 
 		return $string;
-	}
-
-	private function generateFile($filename, $buffer)
-	{
-		File::write($this->baseDir . $filename, $buffer);
 	}
 }
