@@ -18,7 +18,7 @@ use Wilsonge\Statistics\Guassian;
  *
  * @since  1.0
  */
-class Spice extends AbstractCliApplication
+class AbstractSpice extends AbstractCliApplication
 {
 	/**
 	 * The number of files to produce.
@@ -115,6 +115,7 @@ class Spice extends AbstractCliApplication
 	 * @since  1.0
 	 */
 	protected $fileName;
+
 	/**
 	 * Class constructor
 	 *

@@ -19,8 +19,16 @@ use Wilsonge\Statistics\Guassian;
  *
  * @since  1.0
  */
-class Resistorerror extends Spice
+class Components extends AbstractSpice
 {
+	/**
+	 * The pecentage of the value to call the std dev.
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $error;
+
 	/**
 	 * Class constructor
 	 *
@@ -30,8 +38,10 @@ class Resistorerror extends Spice
 	{
 		parent::__construct();
 
-		$this->inductorDev = 0.1 * $this->inductor;
-		$this->capDev = 0.1 * $this->capacitor;
+		$this->error = 0.1;
+
+		$this->inductorDev = $this->error * $this->inductor;
+		$this->capDev = $this->error * $this->capacitor;
 		$this->fileName = 'spice-error.cir';
 		$this->rTerm = 3.3;		
 	}
