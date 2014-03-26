@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<registry>
+	<node name="nTaps" type="integer">11</node>
+	<node name="pulseType" type="string">Single</node>
+	<node name="fileName" type="string">spice-debug.cir</node>
+	<node name="pulseSource" type="string">V</node>
+</registry>
