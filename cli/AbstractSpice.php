@@ -155,7 +155,7 @@ class AbstractSpice extends AbstractCliApplication
 
 		// Initialize our Guassian Class
 		$this->statsClass = new \Wilsonge\Statistics\Guassian;
-		
+
 		$this->baseDir = $config->get('baseDir', null) ? $config->get('baseDir') : JPATH_ROOT . '/spice/';
 		$this->fileName = $config->get('fileName', null) ? $config->get('fileName') : 'spice.cir';
 		$this->nTaps = $config->get('nTaps', null) ? $config->get('nTaps') : 50;
@@ -169,7 +169,7 @@ class AbstractSpice extends AbstractCliApplication
 		$this->pulseSource = $config->get('pulseSource', null) ? $config->get('pulseSource') : 'I';
 
 		// Calculate the perfect termination resistance
-		$this->rTerm = sqrt($this->inductor/$this->capacitor);
+		$this->rTerm = $config->get('rTerm', null) ? $config->get('rTerm') : sqrt($this->inductor/$this->capacitor);
 
 		parent::__construct($input, $config, $output);
 	}
