@@ -8,41 +8,33 @@
 
 namespace Wilsonge\Cli;
 
-use Joomla\Application\AbstractCliApplication;
-use Joomla\Application\Cli\Output\Xml;
-use Joomla\Filesystem\File;
-use Wilsonge\Statistics\Guassian;
-
 /**
  * CLI application creating the Spice sample files with a 10% of the absolute value of the components
  * and a 3.3 ohm resistor
  *
  * @since  1.0
  */
-class Components extends AbstractSpice
+class Components extends AbstractXml
 {
 	/**
-	 * The pecentage of the value to call the std dev.
+	 * The xml path to the debug file.
 	 *
 	 * @var    integer
 	 * @since  1.0
 	 */
-	protected $error;
+	protected $xmlPath;
 
 	/**
 	 * Class constructor
 	 *
 	 * @since   1.0
 	 */
-	public function __construct()
+	public function __construct(Registry $config = null)
 	{
+		$this->xmlPath = JPATH_ROOT . '/cli/components.xml';
+
 		parent::__construct();
-
-		$this->error = 0.1;
-
-		$this->inductorDev = $this->error * $this->inductor;
-		$this->capDev = $this->error * $this->capacitor;
-		$this->fileName = 'spice-error.cir';
-		$this->rTerm = 3.3;		
+		
+		$this->out('XML input taken from: ' . $this->xmlPath);
 	}
 }
