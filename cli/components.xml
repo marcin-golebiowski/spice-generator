@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <registry>
-	<node name="fileName" type="string">spice-error2.cir</node>
+	<node name="fileName" type="string">spice-error.cir</node>
 	<node name="capDev" type="double">4.7</node>
 	<node name="inductorDev" type="double">47</node>
 	<node name="rTerm" type="double">3.3</node>
