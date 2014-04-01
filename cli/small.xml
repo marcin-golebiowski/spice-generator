@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<registry>
+	<node name="nTaps" type="integer">900</node>
+	<node name="pulseType" type="string">Single</node>
+	<node name="fileName" type="string">spice-900.cir</node>
+	<node name="pulseSource" type="string">V</node>
+	<node name="pulseOnTime" type="string">1</node>
+	<node name="pulseStartTime" type="string">1</node>
+	<node name="pulseLength" type="string">200</node>
+	<node name="capacitor" type="string">0.052222222222</node>
+	<node name="inductor" type="string">0.52222222222</node>
+</registry>

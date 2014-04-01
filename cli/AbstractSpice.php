@@ -22,17 +22,9 @@ use Wilsonge\Statistics\Guassian;
 class AbstractSpice extends AbstractCliApplication
 {
 	/**
-	 * The number of files to produce.
-	 *
-	 * @var    integer
-	 * @since  1.0
-	 */
-	protected $fileNumber;
-
-	/**
 	 * The base directory to create the Spice files in.
 	 *
-	 * @var    integer
+	 * @var    string
 	 * @since  1.0
 	 */
 	protected $baseDir;
@@ -48,7 +40,7 @@ class AbstractSpice extends AbstractCliApplication
 	/**
 	 * The terminating resistance value.
 	 *
-	 * @var    integer
+	 * @var    double
 	 * @since  1.0
 	 */
 	protected $rTerm;
@@ -64,7 +56,7 @@ class AbstractSpice extends AbstractCliApplication
 	/**
 	 * The pulse width.
 	 *
-	 * @var    integer
+	 * @var    double
 	 * @since  1.0
 	 */
 	protected $pulsePosition;
@@ -72,7 +64,7 @@ class AbstractSpice extends AbstractCliApplication
 	/**
 	 * The pulse position.
 	 *
-	 * @var    integer
+	 * @var    double
 	 * @since  1.0
 	 */
 	protected $pulseWidth;
@@ -80,7 +72,7 @@ class AbstractSpice extends AbstractCliApplication
 	/**
 	 * The standard deviation of the capacitors.
 	 *
-	 * @var    integer
+	 * @var    double
 	 * @since  1.0
 	 */
 	protected $capDev;
@@ -88,7 +80,7 @@ class AbstractSpice extends AbstractCliApplication
 	/**
 	 * The standard deviation of the indctuors.
 	 *
-	 * @var    integer
+	 * @var    double
 	 * @since  1.0
 	 */
 	protected $inductorDev;
@@ -96,7 +88,7 @@ class AbstractSpice extends AbstractCliApplication
 	/**
 	 * The value of the capacitance in nF.
 	 *
-	 * @var    integer
+	 * @var    double
 	 * @since  1.0
 	 */
 	protected $capacitor;
@@ -104,7 +96,7 @@ class AbstractSpice extends AbstractCliApplication
 	/**
 	 * The value of the inductance in nH.
 	 *
-	 * @var    integer
+	 * @var    double
 	 * @since  1.0
 	 */
 	protected $inductor;
@@ -138,6 +130,30 @@ class AbstractSpice extends AbstractCliApplication
 	protected $pulseSource;
 
 	/**
+	 * The time for the pulse to turn on and off
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $pulseOnTime;
+
+	/**
+	 * The time before the pulse should be injected
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $pulseStartTime;
+
+	/**
+	 * The time the pulse is on for
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $pulseLength;
+
+	/**
 	 * Class constructor
 	 *
 	 * @since   1.0
@@ -167,6 +183,9 @@ class AbstractSpice extends AbstractCliApplication
 		$this->capDev = $config->get('capDev', null) ? $config->get('capDev') : 0;
 		$this->pulseType = $config->get('pulseType', null) ? $config->get('pulseType') : 'Gaussian';
 		$this->pulseSource = $config->get('pulseSource', null) ? $config->get('pulseSource') : 'I';
+		$this->pulseOnTime = $config->get('pulseOnTime', null) ? $config->get('pulseOnTime') : 10;
+		$this->pulseStartTime = $config->get('pulseStartTime', null) ? $config->get('pulseStartTime') : 100;
+		$this->pulseLength = $config->get('pulseLength', null) ? $config->get('pulseLength') : 1000;
 
 		// Calculate the perfect termination resistance
 		$this->rTerm = $config->get('rTerm', null) ? $config->get('rTerm') : sqrt($this->inductor/$this->capacitor);
@@ -230,6 +249,7 @@ class AbstractSpice extends AbstractCliApplication
 
 		$string = null;
 		$pulseTimeUnits = 'ns';
+		$pulseNoise = 0.1;
 
 		$string .= "* LC transmission line with charge injection" . "\n";
 
@@ -241,12 +261,12 @@ class AbstractSpice extends AbstractCliApplication
 		else
 		{
 			$tapIndex = $this->nTaps + 1;
-			$pulseOnTime = 10;
+			$pulseAmplitude = 1;
 			
 			$string .= $this->pulseSource . sprintf('%03d', 1) . ' N' . sprintf('%03d', $tapIndex) . ' 0 ' . 'PULSE(0.0' .  $pulseAmplitudeUnits . ' '
-				. number_format(1 , 6) .  $pulseAmplitudeUnits . ' ' . number_format(10, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6)
-				. $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6)
-				. $pulseTimeUnits . ' 1.0' . $pulseTimeUnits . ')' . "\n";
+				. number_format($pulseAmplitude , 6) .  $pulseAmplitudeUnits . ' ' . number_format($this->pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($this->pulseOnTime/2, 6)
+				. $pulseTimeUnits . ' ' . number_format($this->pulseOnTime/2, 6)
+				. $pulseTimeUnits . ' ' . $this->pulseLength . $pulseTimeUnits . ')' . "\n";
 
 			$string .= "R1 0 N001 " . number_format($this->rTerm, 6) . "\n";
 		}
@@ -259,7 +279,7 @@ class AbstractSpice extends AbstractCliApplication
 			$pulseAmplitude = $this->statsClass->createFunction($tap, $this->pulsePosition, $this->pulseWidth);
 			// $this->out("tap, pulsePosition, pulseWidth, Pulse amplitude: \n" . $tap . ', ' . $this->pulsePosition . ', ' . $this->pulseWidth . ', ' . $pulseAmplitude . '\n');
 			$string .= $this->generateTapComponents($tap,
-				$pulseAmplitude, 0.1, $pulseAmplitudeUnits, 100, 10, $pulseTimeUnits, // Pulse Param
+				$pulseAmplitude, $pulseNoise, $pulseAmplitudeUnits, $this->pulseStartTime, $this->pulseOnTime, $pulseTimeUnits, $this->pulseLength, // Pulse Param
 				$this->capacitor, $this->capDev, 'nF', // Cap Param
 				$this->inductor, $this->inductorDev, 'nH' // Inductor Param
 			);
@@ -280,7 +300,7 @@ class AbstractSpice extends AbstractCliApplication
 	 *
 	 * @return  string
 	 */
-	private function generateTapComponents($tapIndex, $pulseAmplitude, $pulseNoise, $pulseAmplitudeUnits, $pulseStartTime, $pulseOnTime, $pulseTimeUnits,
+	private function generateTapComponents($tapIndex, $pulseAmplitude, $pulseNoise, $pulseAmplitudeUnits, $pulseStartTime, $pulseOnTime, $pulseTimeUnits, $pulseLength,
 		$capNominal, $capSigma, $capUnits, $inductorNominal, $inductorSigma, $inductorUnits)
 	{
 		$string = null;
@@ -296,7 +316,7 @@ class AbstractSpice extends AbstractCliApplication
 		if ($this->pulseType == 'Gaussian')
 		{
 			$string .= $this->pulseSource . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $tapIndex) . ' 0 ' . 'PULSE(0.0' .  $pulseAmplitudeUnits . ' ' . number_format($pulseAmplitude, 6) .  $pulseAmplitudeUnits . ' '
-				. number_format($pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' 1.0ns)' . "\n";
+				. number_format($pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . $pulseLength . $pulseTimeUnits . ')' . "\n";
 		}
 
 		return $string;

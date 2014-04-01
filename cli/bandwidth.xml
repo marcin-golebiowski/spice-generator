@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<registry>
+	<node name="pulseType" type="string">Single</node>
+	<node name="fileName" type="string">spice-bandwidth.cir</node>
+	<node name="pulseSource" type="string">V</node>
+	<node name="rTerm" type="double">3.16</node>
+	<node name="timeDelay" type="double">148.6</node>
+	<node name="nTaps" type="integer">900</node>
+</registry>

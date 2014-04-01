@@ -25,7 +25,7 @@ require JPATH_ROOT . '/vendor/autoload.php';
 // Execute the application
 try
 {
-	(new Wilsonge\Cli\Components)->execute();
+	(new Wilsonge\Cli\Bandwidth)->execute();
 }
 catch (\Exception $e)
 {
