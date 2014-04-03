@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<registry>
+	<node name="fileName" type="string">spice-model.cir</node>
+	<node name="capDev" type="double">4.7</node>
+	<node name="inductorDev" type="double">47</node>
+	<node name="inductorRes" type="double">500</node>
+	<node name="capacitor" type="string">47</node>
+	<node name="inductor" type="string">470</node>
+	<node name="nTaps" type="integer">11</node>
+	<node name="pulseSource" type="string">V</node>
+	<node name="pulseType" type="string">Single</node>
+	<node name="inputImpedance" type="string">50</node>
+</registry>

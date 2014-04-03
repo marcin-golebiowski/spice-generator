@@ -14,7 +14,7 @@ namespace Wilsonge\Cli;
  *
  * @since  1.0
  */
-class Debug extends AbstractXml
+class Model extends AbstractXml
 {
 	/**
 	 * Class constructor
@@ -23,7 +23,7 @@ class Debug extends AbstractXml
 	 */
 	public function __construct(Registry $config = null)
 	{
-		$this->xmlPath = JPATH_ROOT . '/cli/debug.xml';
+		$this->xmlPath = JPATH_ROOT . '/cli/model.xml';
 
 		parent::__construct();
 		

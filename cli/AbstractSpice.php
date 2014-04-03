@@ -70,14 +70,6 @@ class AbstractSpice extends AbstractCliApplication
 	protected $pulseWidth;
 
 	/**
-	 * The standard deviation of the capacitors.
-	 *
-	 * @var    double
-	 * @since  1.0
-	 */
-	protected $capDev;
-
-	/**
 	 * The standard deviation of the indctuors.
 	 *
 	 * @var    double
@@ -86,12 +78,36 @@ class AbstractSpice extends AbstractCliApplication
 	protected $inductorDev;
 
 	/**
+	 * The internal resistance of the inductor in mOhms.
+	 *
+	 * @var    double
+	 * @since  1.0
+	 */
+	protected $inductorRes;
+
+	/**
 	 * The value of the capacitance in nF.
 	 *
 	 * @var    double
 	 * @since  1.0
 	 */
 	protected $capacitor;
+
+	/**
+	 * The standard deviation of the capacitors.
+	 *
+	 * @var    double
+	 * @since  1.0
+	 */
+	protected $capDev;
+
+	/**
+	 * The internal resistance of the capacitor in mOhms.
+	 *
+	 * @var    double
+	 * @since  1.0
+	 */
+	protected $capRes;
 
 	/**
 	 * The value of the inductance in nH.
@@ -154,6 +170,15 @@ class AbstractSpice extends AbstractCliApplication
 	protected $pulseLength;
 
 	/**
+	 * The input impedance in ohms - only for a single
+	 * input
+	 *
+	 * @var    integer
+	 * @since  1.0
+	 */
+	protected $inputImpedance;
+
+	/**
 	 * Class constructor
 	 *
 	 * @since   1.0
@@ -179,13 +204,16 @@ class AbstractSpice extends AbstractCliApplication
 		$this->pulseWidth = $config->get('pulseWidth', null) ? $config->get('pulseWidth') : 2.5;
 		$this->inductor = $config->get('inductor', null) ? $config->get('inductor') : 470.0;
 		$this->inductorDev = $config->get('inductorDev', null) ? $config->get('inductorDev') : 0;
+		$this->inductorRes = $config->get('inductorRes', null) ? $config->get('inductorRes') : 0;
 		$this->capacitor = $config->get('capacitor', null) ? $config->get('capacitor') : 47.0;
 		$this->capDev = $config->get('capDev', null) ? $config->get('capDev') : 0;
+		$this->capRes = $config->get('capRes', null) ? $config->get('capRes') : 0;
 		$this->pulseType = $config->get('pulseType', null) ? $config->get('pulseType') : 'Gaussian';
 		$this->pulseSource = $config->get('pulseSource', null) ? $config->get('pulseSource') : 'I';
 		$this->pulseOnTime = $config->get('pulseOnTime', null) ? $config->get('pulseOnTime') : 10;
 		$this->pulseStartTime = $config->get('pulseStartTime', null) ? $config->get('pulseStartTime') : 100;
 		$this->pulseLength = $config->get('pulseLength', null) ? $config->get('pulseLength') : 1000;
+		$this->inputImpedance = $config->get('inputImpedance', null) ? $config->get('inputImpedance') : 0;
 
 		// Calculate the perfect termination resistance
 		$this->rTerm = $config->get('rTerm', null) ? $config->get('rTerm') : sqrt($this->inductor/$this->capacitor);
@@ -253,22 +281,37 @@ class AbstractSpice extends AbstractCliApplication
 
 		$string .= "* LC transmission line with charge injection" . "\n";
 
+		if ($this->inductorRes != 0)
+		{
+			$endUnit = (2 * $this->nTaps) + 1;
+		}
+		else
+		{
+			$endUnit = $this->nTaps + 1;
+		}
+
 		if ($this->pulseType == 'Gaussian')
 		{
-			$string .= "R1 0 N001 " . number_format($this->rTerm, 6) . "\n";
-			$string .= "R2 0 N" . sprintf('%03d', $this->nTaps + 1) . ' ' . number_format($this->rTerm, 6) . "\n";
+			$string .= "R" . sprintf('%03d', 1) . " 0 N" . sprintf('%03d', 1) . ' ' . number_format($this->rTerm, 6) . "\n";
+			$string .= "R" . sprintf('%03d', 2) . " 0 N" . sprintf('%03d', $endUnit) . ' ' . number_format($this->rTerm, 6) . "\n";
 		}
 		else
 		{
 			$tapIndex = $this->nTaps + 1;
 			$pulseAmplitude = 1;
 			
-			$string .= $this->pulseSource . sprintf('%03d', 1) . ' N' . sprintf('%03d', $tapIndex) . ' 0 ' . 'PULSE(0.0' .  $pulseAmplitudeUnits . ' '
+			if ($this->inputImpedance != 0)
+			{
+				$internalResUnits = '';
+				$string .= 'R' . sprintf('%03d', 2) . ' N' . sprintf('%03d', $endUnit) . ' N'  . sprintf('%03d', $endUnit + 1) . ' ' . number_format($this->inputImpedance, 6) . $internalResUnits . "\n";
+			}
+			
+			$string .= $this->pulseSource . sprintf('%03d', 1) . ' N' . sprintf('%03d', $endUnit + 1) . ' 0 ' . 'PULSE(0.0' .  $pulseAmplitudeUnits . ' '
 				. number_format($pulseAmplitude , 6) .  $pulseAmplitudeUnits . ' ' . number_format($this->pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($this->pulseOnTime/2, 6)
 				. $pulseTimeUnits . ' ' . number_format($this->pulseOnTime/2, 6)
 				. $pulseTimeUnits . ' ' . $this->pulseLength . $pulseTimeUnits . ')' . "\n";
 
-			$string .= "R1 0 N001 " . number_format($this->rTerm, 6) . "\n";
+			$string .= "R" . sprintf('%03d', 1) . " 0 N001 " . number_format($this->rTerm, 6) . "\n";
 		}
 
 		$i = 0;
@@ -276,12 +319,12 @@ class AbstractSpice extends AbstractCliApplication
 		while ($i < $this->nTaps)
 		{
 			$tap = $i + 1;
-			$pulseAmplitude = $this->statsClass->createFunction($tap, $this->pulsePosition, $this->pulseWidth);
 			// $this->out("tap, pulsePosition, pulseWidth, Pulse amplitude: \n" . $tap . ', ' . $this->pulsePosition . ', ' . $this->pulseWidth . ', ' . $pulseAmplitude . '\n');
-			$string .= $this->generateTapComponents($tap,
-				$pulseAmplitude, $pulseNoise, $pulseAmplitudeUnits, $this->pulseStartTime, $this->pulseOnTime, $pulseTimeUnits, $this->pulseLength, // Pulse Param
-				$this->capacitor, $this->capDev, 'nF', // Cap Param
-				$this->inductor, $this->inductorDev, 'nH' // Inductor Param
+			$string .= $this->generateTapComponents(
+				$tap, // Number of elements
+				$pulseNoise, $pulseAmplitudeUnits, $this->pulseOnTime, $pulseTimeUnits, // Pulse Params
+				'nF', // Cap Param
+				'nH' // Inductor Param
 			);
 			$i++;
 		}
@@ -300,24 +343,85 @@ class AbstractSpice extends AbstractCliApplication
 	 *
 	 * @return  string
 	 */
-	private function generateTapComponents($tapIndex, $pulseAmplitude, $pulseNoise, $pulseAmplitudeUnits, $pulseStartTime, $pulseOnTime, $pulseTimeUnits, $pulseLength,
-		$capNominal, $capSigma, $capUnits, $inductorNominal, $inductorSigma, $inductorUnits)
+	private function generateTapComponents($tapIndex, $pulseNoise, $pulseAmplitudeUnits, $pulseOnTime, $pulseTimeUnits, $capUnits, $inductorUnits)
 	{
 		$string = null;
+		$inductorResistance = $this->inductorRes;
+		$capacitorResistance = $this->capRes;
+		$pulseAmplitude = $this->statsClass->createFunction($tapIndex, $this->pulsePosition, $this->pulseWidth);
 
-		$capVal = $this->statsClass->generate($capNominal, $capSigma);
+		// Internal resistance has units of milliOhms
+		$internalResUnits = 'm';
+
+		// Define the number of resistors during initial construction
+		if ($this->pulseType == 'Gaussian')
+		{
+			$prevRes = 2;
+		}
+		else
+		{
+			if ($this->inputImpedance != 0)
+			{
+				$prevRes = 2;
+			}
+			else
+			{
+				$prevRes = 1;
+			}
+		}
+
+		if ($inductorResistance != 0 && $capacitorResistance != 0)
+		{
+			$inductorNumber = (2 * $tapIndex) + $prevRes;
+			$capacitorNumber = (2 * $tapIndex) + $prevRes - 1;
+		}
+		// If just one of inductor resistance or capacitor resistance is on
+		elseif ($inductorResistance != 0 || $capacitorResistance != 0)
+		{
+			$inductorNumber = $tapIndex + $prevRes;
+			$capacitorNumber = $tapIndex + $prevRes;
+		}
+
+		// Calculate the numbering for the internal resistance
+		if ($inductorResistance != 0)
+		{
+			$parallel = (2 * $tapIndex) - 1;
+		}
+		else
+		{
+			$parallel = $tapIndex;
+		}
+
+		$capVal = $this->statsClass->generate($this->capacitor, $this->capDev);
 		// $this->out("The capacitor value is: " . $capVal . '\n');
-		$string .= 'C' . sprintf('%03d', $tapIndex) . ' 0 N'  . sprintf('%03d', $tapIndex) . ' ' . number_format($capVal, 6) . $capUnits . "\n";
-
-		$inductorVal = $this->statsClass->generate($inductorNominal, $inductorSigma);
-		$string .= 'L' . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $tapIndex) . ' N'  . sprintf('%03d', $tapIndex + 1) . ' ' . number_format($inductorVal, 6) . $inductorUnits . "\n";
-		// $this->out("The inductor value is: " . $inductorVal . '\n');
+		$string .= 'C' . sprintf('%03d', $tapIndex) . ' 0 N'  . sprintf('%03d', $parallel) . ' ' . number_format($capVal, 6) . $capUnits . "\n";
 
 		if ($this->pulseType == 'Gaussian')
 		{
-			$string .= $this->pulseSource . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $tapIndex) . ' 0 ' . 'PULSE(0.0' .  $pulseAmplitudeUnits . ' ' . number_format($pulseAmplitude, 6) .  $pulseAmplitudeUnits . ' '
-				. number_format($pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . $pulseLength . $pulseTimeUnits . ')' . "\n";
+			$string .= $this->pulseSource . sprintf('%03d', $tapIndex) . ' 0 N' . sprintf('%03d', $parallel) . ' ' . 'PULSE(0.0' .  $pulseAmplitudeUnits . ' ' . number_format($pulseAmplitude, 6) .  $pulseAmplitudeUnits . ' '
+				. number_format($this->pulseStartTime, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . number_format($pulseOnTime/2, 6) . $pulseTimeUnits . ' ' . $this->pulseLength . $pulseTimeUnits . ')' . "\n";
 		}
+
+		if ($capacitorResistance != 0)
+		{
+			$string .= 'R' . sprintf('%03d', $capacitorNumber) . ' 0 N'  . sprintf('%03d', $parallel) . ' ' . number_format($capacitorResistance, 6) . $internalResUnits . "\n";
+		}
+
+		// If we have a internal resistance in our inductance we have to reset the N values
+		if ($inductorResistance != 0)
+		{
+			$inductorAfter = (2 * $tapIndex);
+
+			$string .= 'R' . sprintf('%03d', $inductorNumber) . ' N' . sprintf('%03d', (2 * $tapIndex)) . ' N'  . sprintf('%03d', (2 * $tapIndex) + 1) . ' ' . number_format($inductorResistance, 6) . $internalResUnits . "\n";
+		}
+		else
+		{
+			$inductorAfter = $tapIndex + 1;
+		}
+
+		$inductorVal = $this->statsClass->generate($this->inductor, $this->inductorDev);
+		$string .= 'L' . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $parallel) . ' N'  . sprintf('%03d', $inductorAfter) . ' ' . number_format($inductorVal, 6) . $inductorUnits . "\n";
+		// $this->out("The inductor value is: " . $inductorVal . '\n');
 
 		return $string;
 	}
