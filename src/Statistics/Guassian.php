@@ -13,7 +13,7 @@ namespace Wilsonge\Statistics;
  *
  * @since  1.0
  */
-class Guassian implements GuassianInterface
+class Guassian implements InputInterface
 {
 	/**
 	 * Method generate a guassian value for a given x, mean and standard deviation
@@ -47,7 +47,7 @@ class Guassian implements GuassianInterface
 	 *
 	 * @since   1.0
 	 */
-	public function generate($mu, $sigma)
+	public function generateFunction($mu, $sigma)
 	{
 		if (function_exists('stats_rand_gen_normal'))
 		{
