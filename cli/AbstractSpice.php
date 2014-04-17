@@ -46,12 +46,28 @@ class AbstractSpice extends AbstractCliApplication
 	protected $rTerm;
 
 	/**
-	 * The instance of the Gaussian Statistics Class to get.
+	 * The instance of the Statistics Class to get for the capacitor.
 	 *
 	 * @var    GuassianInterface
 	 * @since  1.0
 	 */
-	protected $statsClass;
+	protected $capacitorStats;
+
+	/**
+	 * The instance of the Statistics Class to get for the inductor.
+	 *
+	 * @var    GuassianInterface
+	 * @since  1.0
+	 */
+	protected $inductorStats;
+
+	/**
+	 * The instance of the Gaussian Statistics Class to get for the pulse.
+	 *
+	 * @var    GuassianInterface
+	 * @since  1.0
+	 */
+	protected $pulseStats;
 
 	/**
 	 * The pulse width.
@@ -194,8 +210,11 @@ class AbstractSpice extends AbstractCliApplication
 			$config = new \Joomla\Registry\Registry;
 		}
 
-		// Initialize our Guassian Class
-		$this->statsClass = new \Wilsonge\Statistics\Guassian;
+		// Initialize our Gaussian Class
+		$statsClass = new \Wilsonge\Statistics\Gaussian;
+		$this->capacitorStats = $statsClass;
+		$this->inductorStats = $statsClass;
+		$this->pulseStats = $statsClass;
 
 		$this->baseDir = $config->get('baseDir', null) ? $config->get('baseDir') : JPATH_ROOT . '/spice/';
 		$this->fileName = $config->get('fileName', null) ? $config->get('fileName') : 'spice.cir';
@@ -348,7 +367,7 @@ class AbstractSpice extends AbstractCliApplication
 		$string = null;
 		$inductorResistance = $this->inductorRes;
 		$capacitorResistance = $this->capRes;
-		$pulseAmplitude = $this->statsClass->createFunction($tapIndex, $this->pulsePosition, $this->pulseWidth);
+		$pulseAmplitude = $this->pulseStats->createFunction($tapIndex, $this->pulsePosition, $this->pulseWidth);
 
 		// Internal resistance has units of milliOhms
 		$internalResUnits = 'm';
@@ -392,7 +411,7 @@ class AbstractSpice extends AbstractCliApplication
 			$parallel = $tapIndex;
 		}
 
-		$capVal = $this->statsClass->generate($this->capacitor, $this->capDev);
+		$capVal = $this->capacitorStats->generateFunction($this->capacitor, $this->capDev);
 		// $this->out("The capacitor value is: " . $capVal . '\n');
 		$string .= 'C' . sprintf('%03d', $tapIndex) . ' 0 N'  . sprintf('%03d', $parallel) . ' ' . number_format($capVal, 6) . $capUnits . "\n";
 
@@ -419,7 +438,7 @@ class AbstractSpice extends AbstractCliApplication
 			$inductorAfter = $tapIndex + 1;
 		}
 
-		$inductorVal = $this->statsClass->generate($this->inductor, $this->inductorDev);
+		$inductorVal = $this->inductorStats->generateFunction($this->inductor, $this->inductorDev);
 		$string .= 'L' . sprintf('%03d', $tapIndex) . ' N' . sprintf('%03d', $parallel) . ' N'  . sprintf('%03d', $inductorAfter) . ' ' . number_format($inductorVal, 6) . $inductorUnits . "\n";
 		// $this->out("The inductor value is: " . $inductorVal . '\n');
 
